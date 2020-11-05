@@ -457,6 +457,8 @@ public:
 
     failover_callback * failoverCallback_;
     session * session_;
+    
+	virtual bool autocommit(const bool) = 0;
 
 private:
     SOCI_NOT_COPYABLE(session_backend)

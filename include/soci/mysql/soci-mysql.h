@@ -248,6 +248,8 @@ struct mysql_session_backend : details::session_backend
     std::string get_backend_name() const SOCI_OVERRIDE { return "mysql"; }
 
     void clean_up();
+    
+    virtual bool autocommit(const bool);
 
     mysql_statement_backend * make_statement_backend() SOCI_OVERRIDE;
     mysql_rowid_backend * make_rowid_backend() SOCI_OVERRIDE;

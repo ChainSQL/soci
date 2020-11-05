@@ -301,6 +301,8 @@ struct sqlite3_session_backend : details::session_backend
     std::string get_backend_name() const SOCI_OVERRIDE { return "sqlite3"; }
 
     void clean_up();
+    
+    virtual bool autocommit(const bool);
 
     sqlite3_statement_backend * make_statement_backend() SOCI_OVERRIDE;
     sqlite3_rowid_backend * make_rowid_backend() SOCI_OVERRIDE;

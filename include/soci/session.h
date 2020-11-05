@@ -124,6 +124,19 @@ public:
     // for this table (although some backends ignore the table argument and
     // return the last value auto-generated in this session).
     bool get_last_insert_id(std::string const & table, long long & value);
+    
+    // In mycat, `autocommit` always is set false by transaction.
+    // Regardless a transaction commit or rollback,
+    // `autocommit` is still false. So application should launch
+    // this function to set `auotcommit` in mycat.
+    bool autocommit(const bool auto_mode);
+    void autocommit_after_transaction(const bool autocommit) {
+        set_autocommit_after_trans_ = autocommit;
+    }
+
+    bool autocommit_after_transaction() {
+        return set_autocommit_after_trans_;
+    }
 
     // Returns once_temp_type for the internally composed query
     // for the list of tables in the current schema.
@@ -206,6 +219,10 @@ private:
     bool isFromPool_;
     std::size_t poolPosition_;
     connection_pool * pool_;
+    
+    // whether autocommit should be set after a transaction commit or rollback
+    // in case of Mycat
+    bool set_autocommit_after_trans_;
 };
 
 } // namespace soci

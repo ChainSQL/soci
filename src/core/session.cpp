@@ -76,7 +76,7 @@ session::session()
     : once(this), prepare(this), query_transformation_(NULL),
       logger_(new standard_logger_impl),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL)
+      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
 {
 }
 
@@ -85,7 +85,7 @@ session::session(connection_parameters const & parameters)
       logger_(new standard_logger_impl),
       lastConnectParameters_(parameters),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL)
+      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
 {
     open(lastConnectParameters_);
 }
@@ -96,7 +96,7 @@ session::session(backend_factory const & factory,
     logger_(new standard_logger_impl),
       lastConnectParameters_(factory, connectString),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL)
+      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
 {
     open(lastConnectParameters_);
 }
@@ -107,7 +107,7 @@ session::session(std::string const & backendName,
       logger_(new standard_logger_impl),
       lastConnectParameters_(backendName, connectString),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL)
+      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
 {
     open(lastConnectParameters_);
 }
@@ -117,7 +117,7 @@ session::session(std::string const & connectString)
       logger_(new standard_logger_impl),
       lastConnectParameters_(connectString),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL)
+      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
 {
     open(lastConnectParameters_);
 }
@@ -125,7 +125,7 @@ session::session(std::string const & connectString)
 session::session(connection_pool & pool)
     : query_transformation_(NULL),
       logger_(new standard_logger_impl),
-      isFromPool_(true), pool_(&pool)
+      isFromPool_(true), pool_(&pool), set_autocommit_after_trans_(false)
 {
     poolPosition_ = pool.lease();
     session & pooledSession = pool.at(poolPosition_);
@@ -420,6 +420,13 @@ bool session::get_next_sequence_value(std::string const & sequence, long long & 
     ensureConnected(backEnd_);
 
     return backEnd_->get_next_sequence_value(*this, sequence, value);
+}
+
+bool session::autocommit(const bool auto_mode) {
+    
+    ensureConnected(backEnd_);
+    
+    return backEnd_->autocommit(auto_mode);
 }
 
 bool session::get_last_insert_id(std::string const & sequence, long long & value)

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <sstream>
+#include <thread>
 #include <string>
 
 #include <string.h>
@@ -58,22 +59,35 @@ void sqlite3_statement_backend::prepare(std::string const & query,
 {
     clean_up();
 
-    char const* tail = 0; // unused;
-    int const res = sqlite3_prepare_v2(session_.conn_,
-                              query.c_str(),
-                              static_cast<int>(query.size()),
-                              &stmt_,
-                              &tail);
-    if (res != SQLITE_OK)
-    {
-        char const* zErrMsg = sqlite3_errmsg(session_.conn_);
+	//const int BUSY_TIMEOUT = 8000;
+	//sqlite3_busy_timeout(session_.conn_, BUSY_TIMEOUT);
+	int nTryTimes = 5;
+	do {
 
-        std::ostringstream ss;
-        ss << "sqlite3_statement_backend::prepare: "
-           << zErrMsg;
-        throw sqlite3_soci_error(ss.str(), res);
-    }
-    databaseReady_ = true;
+		char const* tail = 0; // unused;
+		int const res = sqlite3_prepare_v2(session_.conn_,
+			query.c_str(),
+			static_cast<int>(query.size()),
+			&stmt_,
+			&tail);
+		if (res != SQLITE_OK){
+			if (res == SQLITE_BUSY && (nTryTimes--) > 0) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+			else {
+
+				char const* zErrMsg = sqlite3_errmsg(session_.conn_);
+				std::ostringstream ss;
+				ss << "sqlite3_statement_backend::prepare: "
+					<< zErrMsg;
+				throw sqlite3_soci_error(ss.str(), res);
+			}
+		}
+		databaseReady_ = true;
+		break;
+	} while (1);
+
 }
 
 // sqlite3_reset needs to be called before a prepared statment can
@@ -214,25 +228,36 @@ sqlite3_statement_backend::load_one()
         return ef_no_data;
 
     statement_backend::exec_fetch_result retVal = ef_success;
-    int const res = sqlite3_step(stmt_);
+	
+	//const int BUSY_TIMEOUT = 8000;
+	//sqlite3_busy_timeout(session_.conn_, BUSY_TIMEOUT);
+	// // max request times
+	int nTryTimes = 5;
+	do {
+		int const res = sqlite3_step(stmt_);
+		if (SQLITE_DONE == res){
+			databaseReady_ = false;
+			retVal = ef_no_data;
+		}
+		else if (SQLITE_ROW == res){
+		}
+		else if (SQLITE_BUSY == res && (nTryTimes--) >0) {
 
-    if (SQLITE_DONE == res)
-    {
-        databaseReady_ = false;
-        retVal = ef_no_data;
-    }
-    else if (SQLITE_ROW == res)
-    {
-    }
-    else
-    {
-        char const* zErrMsg = sqlite3_errmsg(session_.conn_);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}
+		else{
+			char const* zErrMsg = sqlite3_errmsg(session_.conn_);
 
-        std::ostringstream ss;
-        ss << "sqlite3_statement_backend::loadOne: "
-            << zErrMsg;
-        throw sqlite3_soci_error(ss.str(), res);
-    }
+			std::ostringstream ss;
+			ss << "sqlite3_statement_backend::loadOne: "
+				<< zErrMsg;
+			throw sqlite3_soci_error(ss.str(), res);
+		}
+
+		break;
+	} while (1);
+
     return retVal;
 }
 
