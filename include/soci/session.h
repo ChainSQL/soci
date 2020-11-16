@@ -200,6 +200,23 @@ public:
     details::rowid_backend * make_rowid_backend();
     details::blob_backend * make_blob_backend();
 
+	// fix an issue that we can't catch an exception on top-level,
+	// beacause desctructor of one-temp-type driver to execute actual SQL-engine API.
+	// however destructor can catch an exception but can't throw an exception that was catched by destructor.
+	void set_last_error(const std::pair<int, std::string>& e) {
+		last_error_ = e;
+	}
+	const std::pair<int, std::string> last_error() const {
+		return last_error_;
+	}
+
+	void set_affected_row_count(int count) {
+		affected_row_count_ = count;
+	}
+
+	int get_affected_row_count() {
+		return affected_row_count_;
+	}
 private:
     SOCI_NOT_COPYABLE(session)
 
@@ -219,7 +236,15 @@ private:
     bool isFromPool_;
     std::size_t poolPosition_;
     connection_pool * pool_;
-    
+
+	// fix an issue that we can't catch an exception on top-level,
+	// beacause desctructor of one-temp-type driver to execute actual SQL-engine API.
+	// however destructor can catch an exception but can't throw an exception that was catched by destructor.
+	std::pair<int, std::string> last_error_;
+
+	//affected row count for insert/update/delete
+	int affected_row_count_;
+
     // whether autocommit should be set after a transaction commit or rollback
     // in case of Mycat
     bool set_autocommit_after_trans_;
