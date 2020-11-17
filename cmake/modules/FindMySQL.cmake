@@ -17,7 +17,7 @@
 include(CheckCXXSourceCompiles)
 
 if ((NOT DEFINED ENV{MYSQL_DIR}) AND (DEFINED MYSQL_DIR))
-  set (ENV{MYSQL_DIR} MYSQL_DIR)
+  set (ENV{MYSQL_DIR} ${MYSQL_DIR})
 endif ()
 
 if(WIN32)
