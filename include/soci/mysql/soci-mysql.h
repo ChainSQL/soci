@@ -248,6 +248,10 @@ struct mysql_session_backend : details::session_backend
     std::string get_backend_name() const SOCI_OVERRIDE { return "mysql"; }
 
     void clean_up();
+
+    
+	// fix a bug on `MySQL has gone away`
+	void connect_mysql();
     
     virtual bool autocommit(const bool);
 
@@ -255,7 +259,9 @@ struct mysql_session_backend : details::session_backend
     mysql_rowid_backend * make_rowid_backend() SOCI_OVERRIDE;
     mysql_blob_backend * make_blob_backend() SOCI_OVERRIDE;
 
+
     MYSQL *conn_;
+	connection_parameters const connect_parameters_;
 };
 
 

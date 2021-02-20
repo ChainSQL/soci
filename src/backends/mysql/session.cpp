@@ -326,21 +326,29 @@ void parse_connect_string(const string & connectString,
 mysql_session_backend::mysql_session_backend(
     connection_parameters const & parameters)
 {
-    string host, user, password, db, unix_socket, ssl_ca, ssl_cert, ssl_key,
+	connect_mysql();
+}
+
+#if defined(__GNUC__) && ( __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ > 6)))
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+void mysql_session_backend::connect_mysql() {
+	string host, user, password, db, unix_socket, ssl_ca, ssl_cert, ssl_key,
         charset;
-    int port, local_infile;
-    unsigned int connect_timeout, read_timeout, write_timeout;
+	int port = 0;
+	int local_infile = 0;
     bool host_p, user_p, password_p, db_p, unix_socket_p, port_p,
-        ssl_ca_p, ssl_cert_p, ssl_key_p, local_infile_p, charset_p,
-        connect_timeout_p, read_timeout_p, write_timeout_p;
-    parse_connect_string(parameters.get_connect_string(), &host, &host_p, &user, &user_p,
+        ssl_ca_p, ssl_cert_p, ssl_key_p, local_infile_p, charset_p;
+    parse_connect_string(connect_parameters_.get_connect_string(), &host, &host_p, &user, &user_p,
         &password, &password_p, &db, &db_p,
         &unix_socket, &unix_socket_p, &port, &port_p,
         &ssl_ca, &ssl_ca_p, &ssl_cert, &ssl_cert_p, &ssl_key, &ssl_key_p,
-        &local_infile, &local_infile_p, &charset, &charset_p,
-        &connect_timeout, &connect_timeout_p,
-        &read_timeout, &read_timeout_p,
-        &write_timeout, &write_timeout_p);
+        &local_infile, &local_infile_p, &charset, &charset_p);
     conn_ = mysql_init(NULL);
     if (conn_ == NULL)
     {
@@ -358,9 +366,9 @@ mysql_session_backend::mysql_session_backend(
     {
         mysql_ssl_set(conn_, ssl_key_p ? ssl_key.c_str() : NULL,
                       ssl_cert_p ? ssl_cert.c_str() : NULL,
-                      ssl_ca.c_str(), 0, 0);
+                      ssl_ca_p ? ssl_ca.c_str() : NULL, 0, 0);
     }
-    if (local_infile_p && local_infile == 1)
+    if (local_infile_p and local_infile == 1)
     {
         if (0 != mysql_options(conn_, MYSQL_OPT_LOCAL_INFILE, NULL))
         {
@@ -369,30 +377,34 @@ mysql_session_backend::mysql_session_backend(
                 "mysql_options() failed when trying to set local-infile.");
         }
     }
-    if (connect_timeout_p)
+
+    // RR-2056
+    /* The timeout in seconds for each attempt to read from the server.
+     * There are retries if necessary, so the total effective timeout value is
+     * three times the option value(old version).
+     * You can set the value so that a lost connection can be detected earlier
+     * than the TCP/IP Close_Wait_Timeout value of 10 minutes.
+     */
+    int read_timeout = 10;
+    if (0 != mysql_options(conn_, MYSQL_OPT_READ_TIMEOUT, &read_timeout))
     {
-        if (0 != mysql_options(conn_, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout))
-        {
-            clean_up();
-            throw soci_error("mysql_options(MYSQL_OPT_CONNECT_TIMEOUT) failed.");
-        }
+        clean_up();
+        throw soci_error(
+            "mysql_options() failed when trying to set read-timeout.");
     }
-    if (read_timeout_p)
+
+    /* The connect timeout in seconds.
+     * When mysql_real_query return CR_SERVER_LOST, we reconnect and try again once.
+     * And the mysql_real_connect maybe wait long time, so set this option.
+     */
+    int conn_timeout = 10;
+    if (0 != mysql_options(conn_, MYSQL_OPT_CONNECT_TIMEOUT, &conn_timeout))
     {
-        if (0 != mysql_options(conn_, MYSQL_OPT_READ_TIMEOUT, &read_timeout))
-        {
-            clean_up();
-            throw soci_error("mysql_options(MYSQL_OPT_READ_TIMEOUT) failed.");
-        }
+        clean_up();
+        throw soci_error(
+            "mysql_options() failed when trying to set connect-timeout.");
     }
-    if (write_timeout_p)
-    {
-        if (0 != mysql_options(conn_, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout))
-        {
-            clean_up();
-            throw soci_error("mysql_options(MYSQL_OPT_WRITE_TIMEOUT) failed.");
-        }
-    }
+
     if (mysql_real_connect(conn_,
             host_p ? host.c_str() : NULL,
             user_p ? user.c_str() : NULL,
@@ -412,16 +424,6 @@ mysql_session_backend::mysql_session_backend(
         throw mysql_soci_error(errMsg, errNum);
     }
 }
-
-#if defined(__GNUC__) && ( __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ > 6)))
-#pragma GCC diagnostic pop
-#endif
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
-
 
 mysql_session_backend::~mysql_session_backend()
 {
@@ -449,7 +451,25 @@ void hard_exec(MYSQL *conn, const string & query)
 
 void mysql_session_backend::begin()
 {
-    hard_exec(conn_, "BEGIN");
+
+	try {
+		if(conn_ == NULL){
+            connect_mysql();
+        }
+			
+		hard_exec(conn_, "BEGIN");
+	}
+	catch (soci_error err) 
+	{
+		if (0 == handle_error_query())
+		{
+			hard_exec(conn_, "BEGIN");
+		}
+		else
+		{
+			throw err;
+		}
+	}
 }
 
 void mysql_session_backend::commit()
