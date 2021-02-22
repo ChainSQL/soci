@@ -25,6 +25,7 @@
 #endif
 
 #include <soci/soci-backend.h>
+#include <soci/connection-parameters.h>
 #ifdef _WIN32
 #include <winsock.h> // SOCKET
 #endif // _WIN32
