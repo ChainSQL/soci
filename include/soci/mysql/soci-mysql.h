@@ -262,6 +262,11 @@ struct mysql_session_backend : details::session_backend
     mysql_blob_backend * make_blob_backend() SOCI_OVERRIDE;
 
 
+	// return	0 retry query
+	//			1 not retry query
+	int handle_error_query();
+
+
     MYSQL *conn_;
 	connection_parameters const &connect_parameters_;
 };

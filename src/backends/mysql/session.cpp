@@ -425,6 +425,26 @@ void hard_exec(MYSQL *conn, const string & query)
 
 } // namespace unnamed
 
+
+
+int mysql_session_backend::handle_error_query()
+{
+	int result = 1;
+	unsigned int error = mysql_errno(conn_);
+	if (error == CR_SERVER_GONE_ERROR || error == CR_SERVER_LOST) {
+		// reconnect mysql
+		clean_up();
+		connect_mysql();
+		result = 0;
+	}
+	else
+	{
+		throw mysql_soci_error(mysql_error(conn_), error);
+	}
+
+	return result;
+}
+
 void mysql_session_backend::begin()
 {
 
