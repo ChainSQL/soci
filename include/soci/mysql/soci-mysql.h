@@ -30,6 +30,7 @@
 #include <winsock.h> // SOCKET
 #endif // _WIN32
 #include <mysql.h> // MySQL Client
+#include <errmsg.h>
 #include <vector>
 
 
@@ -262,7 +263,7 @@ struct mysql_session_backend : details::session_backend
 
 
     MYSQL *conn_;
-	connection_parameters const connect_parameters_;
+	connection_parameters const &connect_parameters_;
 };
 
 

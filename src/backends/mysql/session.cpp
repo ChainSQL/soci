@@ -170,10 +170,7 @@ void parse_connect_string(const string & connectString,
     int *port, bool *port_p, string *ssl_ca, bool *ssl_ca_p,
     string *ssl_cert, bool *ssl_cert_p, string *ssl_key, bool *ssl_key_p,
     int *local_infile, bool *local_infile_p,
-    string *charset, bool *charset_p,
-    unsigned int *connect_timeout, bool *connect_timeout_p,
-    unsigned int *read_timeout, bool *read_timeout_p,
-    unsigned int *write_timeout, bool *write_timeout_p)
+    string *charset, bool *charset_p)
 {
     *host_p = false;
     *user_p = false;
@@ -186,9 +183,6 @@ void parse_connect_string(const string & connectString,
     *ssl_key_p = false;
     *local_infile_p = false;
     *charset_p = false;
-    *connect_timeout_p = false;
-    *read_timeout_p = false;
-    *write_timeout_p = false;
     string err = "Malformed connection string.";
     string::const_iterator i = connectString.begin(),
         end = connectString.end();
@@ -211,9 +205,9 @@ void parse_connect_string(const string & connectString,
         }
         skip_white(&i, end, false);
         string val = param_value(&i, end);
-        if (par == "port" && !*port_p)
+        if (par == "port" and not *port_p)
         {
-            if (!valid_int(val))
+            if (not valid_int(val))
             {
                 throw soci_error(err);
             }
@@ -224,83 +218,63 @@ void parse_connect_string(const string & connectString,
             }
             *port_p = true;
         }
-        else if (par == "host" && !*host_p)
+        else if (par == "host" and not *host_p)
         {
             *host = val;
             *host_p = true;
         }
-        else if (par == "user" && !*user_p)
+        else if (par == "user" and not *user_p)
         {
             *user = val;
             *user_p = true;
         }
-        else if ((par == "pass" || par == "password") && !*password_p)
+        else if ((par == "pass" or par == "password") and not *password_p)
         {
             *password = val;
             *password_p = true;
         }
-        else if ((par == "db" || par == "dbname" || par == "service") and !*db_p)
+        else if ((par == "db" or par == "dbname" or par == "service") and
+                 not *db_p)
         {
             *db = val;
             *db_p = true;
         }
-        else if (par == "unix_socket" && !*unix_socket_p)
+        else if (par == "unix_socket" and not *unix_socket_p)
         {
             *unix_socket = val;
             *unix_socket_p = true;
         }
-        else if (par == "sslca" && !*ssl_ca_p)
+        else if (par == "sslca" and not *ssl_ca_p)
         {
             *ssl_ca = val;
             *ssl_ca_p = true;
         }
-        else if (par == "sslcert" && !*ssl_cert_p)
+        else if (par == "sslcert" and not *ssl_cert_p)
         {
             *ssl_cert = val;
             *ssl_cert_p = true;
         }
-        else if (par == "sslkey" && !*ssl_key_p)
+        else if (par == "sslkey" and not *ssl_key_p)
         {
             *ssl_key = val;
             *ssl_key_p = true;
         }
-        else if (par == "local_infile" && !*local_infile_p)
+        else if (par == "local_infile" and not *local_infile_p)
         {
-            if (!valid_int(val))
+            if (not valid_int(val))
             {
                 throw soci_error(err);
             }
             *local_infile = std::atoi(val.c_str());
-            if (*local_infile != 0 && *local_infile != 1)
+            if (*local_infile != 0 and *local_infile != 1)
             {
                 throw soci_error(err);
             }
             *local_infile_p = true;
-        } else if (par == "charset" && !*charset_p)
+        } else if (par == "charset" and not *charset_p)
         {
             *charset = val;
             *charset_p = true;
-        } else if (par == "connect_timeout" && !*connect_timeout_p)
-        {
-            if (!valid_uint(val))
-                throw soci_error(err);
-            char *end;
-            *connect_timeout = std::strtoul(val.c_str(), &end, 10);
-            *connect_timeout_p = true;
-        } else if (par == "read_timeout" && !*read_timeout_p)
-        {
-            if (!valid_uint(val))
-                throw soci_error(err);
-            char *end;
-            *read_timeout = std::strtoul(val.c_str(), &end, 10);
-            *read_timeout_p = true;
-        } else if (par == "write_timeout" && !*write_timeout_p)
-        {
-            if (!valid_uint(val))
-                throw soci_error(err);
-            char *end;
-            *write_timeout = std::strtoul(val.c_str(), &end, 10);
-            *write_timeout_p = true;
         }
         else
         {
@@ -325,6 +299,8 @@ void parse_connect_string(const string & connectString,
 
 mysql_session_backend::mysql_session_backend(
     connection_parameters const & parameters)
+	: conn_(nullptr)
+	, connect_parameters_(parameters)
 {
 	connect_mysql();
 }
