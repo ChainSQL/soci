@@ -168,6 +168,10 @@ struct mysql_statement_backend : details::statement_backend
     mysql_vector_into_type_backend * make_vector_into_type_backend() SOCI_OVERRIDE;
     mysql_vector_use_type_backend * make_vector_use_type_backend() SOCI_OVERRIDE;
 
+    // return	0 retry query
+    //			1 not retry query
+    int handle_error_query();
+
     mysql_session_backend &session_;
 
     MYSQL_RES *result_;
@@ -268,7 +272,7 @@ struct mysql_session_backend : details::session_backend
 
 
     MYSQL *conn_;
-	connection_parameters const &connect_parameters_;
+	connection_parameters const connect_parameters_;
 };
 
 
