@@ -148,18 +148,18 @@ bool valid_int(const string & s)
     return true;
 }
 
-bool valid_uint(const string & s)
-{
-    char *tail;
-    const char *cstr = s.c_str();
-    errno = 0;
-    unsigned long n = std::strtoul(cstr, &tail, 10);
-    if (errno != 0 || n == 0 || n > UINT_MAX)
-        return false;
-    if (*tail != '\0')
-        return false;
-    return true;
-}
+//bool valid_uint(const string & s)
+//{
+//    char *tail;
+//    const char *cstr = s.c_str();
+//    errno = 0;
+//    unsigned long n = std::strtoul(cstr, &tail, 10);
+//    if (errno != 0 || n == 0 || n > UINT_MAX)
+//        return false;
+//    if (*tail != '\0')
+//        return false;
+//    return true;
+//}
 
 void parse_connect_string(const string & connectString,
     string *host, bool *host_p,
