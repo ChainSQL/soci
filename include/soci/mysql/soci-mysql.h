@@ -25,10 +25,12 @@
 #endif
 
 #include <soci/soci-backend.h>
+#include <soci/connection-parameters.h>
 #ifdef _WIN32
 #include <winsock.h> // SOCKET
 #endif // _WIN32
 #include <mysql.h> // MySQL Client
+#include <errmsg.h>
 #include <vector>
 
 
@@ -166,6 +168,10 @@ struct mysql_statement_backend : details::statement_backend
     mysql_vector_into_type_backend * make_vector_into_type_backend() SOCI_OVERRIDE;
     mysql_vector_use_type_backend * make_vector_use_type_backend() SOCI_OVERRIDE;
 
+    // return	0 retry query
+    //			1 not retry query
+    int handle_error_query();
+
     mysql_session_backend &session_;
 
     MYSQL_RES *result_;
@@ -248,6 +254,10 @@ struct mysql_session_backend : details::session_backend
     std::string get_backend_name() const SOCI_OVERRIDE { return "mysql"; }
 
     void clean_up();
+
+    
+	// fix a bug on `MySQL has gone away`
+	void connect_mysql();
     
     virtual bool autocommit(const bool);
 
@@ -255,7 +265,14 @@ struct mysql_session_backend : details::session_backend
     mysql_rowid_backend * make_rowid_backend() SOCI_OVERRIDE;
     mysql_blob_backend * make_blob_backend() SOCI_OVERRIDE;
 
+
+	// return	0 retry query
+	//			1 not retry query
+	int handle_error_query();
+
+
     MYSQL *conn_;
+	connection_parameters const connect_parameters_;
 };
 
 
