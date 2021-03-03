@@ -76,7 +76,7 @@ session::session()
     : once(this), prepare(this), query_transformation_(NULL),
       logger_(new standard_logger_impl),
       uppercaseColumnNames_(false), backEnd_(NULL),
-      isFromPool_(false), pool_(NULL), set_autocommit_after_trans_(false)
+      isFromPool_(false), pool_(NULL), affected_row_count_(0), set_autocommit_after_trans_(false)
 {
 }
 
